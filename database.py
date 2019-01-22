@@ -6,6 +6,7 @@ from sqlalchemy import Column, Integer, DateTime, String, Text, Float, ForeignKe
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import sessionmaker, relationship, backref
+from boardGraphic import *
 
 engine = create_engine(r'sqlite:///go.db', echo=True)
 Session = sessionmaker()
@@ -39,7 +40,9 @@ class Turn(Base):
     lastTurn = Column(Integer, ForeignKey('turn.id'))
     turnNumber = Column(Integer)
     boardString = Column(Text(361))
-
+    x = Column(Integer)
+    y = Column(Integer)
+    #get chatIDs last turn
     def getLastTurn(self):
         if self.lastTurn:
             session.query(Turn).filter(Turn.id==self.lastTurn).one()
@@ -80,11 +83,21 @@ def getGameAndTurnFromChat(chatID):
     turn = session.query(Turn).filter(Turn.id==game.currentTurn).one()
     return game, turn
 
+def dbSetBackGame(chatID):
+    game, turn = getGameAndTurnFromChat(chatID)
+    if turn.lastTurn:
+        game.currentTurn = turn.lastTurn
+    session.commit()
+
 def dbGetLastTurnGameString(chatID):
     game, turn = getGameAndTurnFromChat(chatID)
     lastTurn = turn.getLastTurn()
     if lastTurn: return lastTurn
     else: return False
+
+def getCurrentBoardPictureFromChat(chatID):
+    game, turn = getGameAndTurnFromChat(chatID)
+    return goBoardPicture(turn.boardString,[turn.x, turn.y])
 
 def dbAddTurn(chatID, xy):
     try:
@@ -92,7 +105,7 @@ def dbAddTurn(chatID, xy):
         bStr = turn.boardString
         x, y = xy
         bStr = bStr[:x+y*19] + str((turn.turnNumber+1)%2+1) + bStr[x+y*19+1:]
-        nextTurn = Turn(boardString=bStr, gameID=game.id, turnNumber=(turn.turnNumber+1), lastTurn=turn.id)
+        nextTurn = Turn(boardString=bStr, gameID=game.id, turnNumber=(turn.turnNumber+1), lastTurn=turn.id, x=x, y=y)
         session.add(nextTurn)
         session.commit()
         game.currentTurn = nextTurn.id

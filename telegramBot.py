@@ -39,14 +39,17 @@ def coordsByString(string):
 def turn(bot, update, args=""):
     xy = coordsByString(update["message"]["text"][6:])
     if not xy:
-        update.message.reply_text("Ungültiger Spielzug.")
+        update.message.reply_text("Ungültiger Spielzug. Bitte im Format XY (zB. e14) antworten")
         return
-    x,y = xy
     nextTurn = dbAddTurn(chatID=update["message"]["chat"]["id"], xy=xy)
     if nextTurn:
-        bot.send_photo(update.message.chat.id, photo=goBoardPicture(nextTurn.boardString))
+        bot.send_photo(update.message.chat.id, photo=goBoardPicture(nextTurn.boardString,xy))
     else:
         update.message.reply_text("Hat net geklappt.")
+
+def back(bot, update, args=""):
+    dbSetBackGame(update.message.chat.id)
+    bot.send_photo(update.message.chat.id, photo=getCurrentBoardPictureFromChat(update.message.chat.id))
 
 def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
@@ -61,7 +64,7 @@ def main():
     dp.add_handler(CommandHandler("start", addChat))
     dp.add_handler(CommandHandler("newGame", newGame))
     dp.add_handler(CommandHandler("turn", turn))
-    #dp.add_handler(CommandHandler("back", back))
+    dp.add_handler(CommandHandler("back", back))
     # log all errors
     dp.add_error_handler(error)
     # Start the Bot
